@@ -36,8 +36,6 @@
 
         private static void OnPlaybackStopped(object? sender, StoppedEventArgs args)
         {
-            playbackTime = outputDevice.GetPositionTimeSpan();
-
             outputDevice?.Dispose();
             outputDevice = null;
             audioFile?.Dispose();
@@ -64,7 +62,7 @@
 
             MainViewModel.Instance._timer.Tick += (s, e) =>
             {
-                if (!paused)
+                if (!paused && !MainViewModel.Instance.SliderHeld)
                     playbackTime = outputDevice?.GetPositionTimeSpan() ?? TimeSpan.Zero;
             };
         }
@@ -72,7 +70,7 @@
         // Update is called once per frame
         public static void Update()
         {
-            if (audioFile != null)
+            if (audioFile != null && !MainViewModel.Instance.SliderHeld)
                 playbackTime = outputDevice.GetPositionTimeSpan();
 
             //once the song has ended
@@ -82,12 +80,19 @@
 
         public static void Pause()
         {
-            if (!paused)
+            if (!paused && !MainViewModel.Instance.SliderHeld)
             {
                 playbackTime = outputDevice?.GetPositionTimeSpan() ?? playbackTime;
                 paused = true;
                 outputDevice?.Pause();
             }
+        }
+
+        public static void Stop()
+        {
+            outputDevice?.Stop();
+            playbackTime = TimeSpan.Zero;
+            paused = true;
         }
 
         public static Task LoadAsync(string Song)
@@ -122,7 +127,7 @@
                 await LoadAsync(currentPath);
 
                 // Resume playback
-                audioFile.CurrentTime = playbackTime;
+                audioFile.Skip(playbackTime);
 
                 clipLength = audioFile.TotalTime;
 

@@ -15,6 +15,8 @@ public partial class MainView : UserControl
     public MainView()
     {
         InitializeComponent();
+        PlaybackSlider.PointerEntered += Slider_PointerEntered;
+        PlaybackSlider.PointerExited += Slider_PointerExited;
     }
 
     private void Previous(object? sender, RoutedEventArgs e)
@@ -34,26 +36,21 @@ public partial class MainView : UserControl
 
     private void SliderValueChanged(object sender, RangeBaseValueChangedEventArgs e)
     {
-        //to prevent this from being called when the MusicPlayer changed the slider value
-        if(PlaybackSlider.Value != MainViewModel.Instance.PlaybackTime)
+        if(MainViewModel.Instance.SliderHeld)
         {
             MusicPlayer.playbackTime = TimeSpan.FromSeconds(PlaybackSlider.Value);
-            MusicPlayer.Play();
         }
     }
 
-    private void Slider_TemplateApplied(object? sender, TemplateAppliedEventArgs e)
+    private void Slider_PointerExited(object? sender, PointerEventArgs e)
     {
-        if (sender is Slider slider)
-        {
-            // Find the Track
-            var track = slider.GetTemplateChildren().OfType<Track>().FirstOrDefault();
+        MainViewModel.Instance.SliderHeld = false;
+        MusicPlayer.Play();
+    }
 
-            if (track?.Thumb != null)
-            {
-                track.Thumb.DragStarted += (_, __) => MainViewModel.Instance.SliderHeld = true;
-                track.Thumb.DragCompleted += (_, __) => MainViewModel.Instance.SliderHeld = false;
-            }
-        }
+    private void Slider_PointerEntered(object? sender, PointerEventArgs e)
+    {
+        MainViewModel.Instance.SliderHeld = true;
+        MusicPlayer.Stop();
     }
 }
