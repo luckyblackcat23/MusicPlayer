@@ -12,8 +12,6 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
 {
     public static MainViewModel Instance { get; private set; }
 
-    public DispatcherTimer _timer;
-
     public const int MinimumUIUpdateTime = 100;
 
     private int _timeBetweenUIUpdates = MinimumUIUpdateTime;
@@ -29,6 +27,10 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
         }
     }
 
+    public DispatcherTimer _timer;
+
+    public bool SliderHeld;
+
     public MainViewModel()
     {
         Instance = this;
@@ -39,7 +41,8 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
         };
         _timer.Tick += (s, e) =>
         {
-            PlaybackTime = MusicPlayer.playbackTime.TotalSeconds;
+            if (!SliderHeld)
+                PlaybackTime = MusicPlayer.playbackTime.TotalSeconds;
         };
         _timer.Start();
 
@@ -111,7 +114,7 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
             }
             else
             {
-                Debug.WriteLine("file does not contain album art. album replaced with default image");
+                //Debug.WriteLine("file does not contain album art. album replaced with default image");
                 return LoadDefaultAlbumImage();
             }
         }

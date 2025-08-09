@@ -30,7 +30,7 @@
         <!-- Progress Bar with Time Labels -->
         <Grid ColumnDefinitions="Auto, *, Auto">
           <TextBlock Text="{Binding PlaybackTime, StringFormat=\{0:0.0\}}" VerticalAlignment="Center" Foreground="White" Width="40"/>
-            <Slider Grid.Column="1" ValueChanged="SliderValueChanged" Minimum="0" Maximum="{Binding SongLength}" Value="{Binding PlaybackTime}" VerticalAlignment="Center" Margin="5,0" Foreground="Green"/>
+            <Slider x:Name="PlaybackSlider"  Grid.Column="1" TemplateApplied="Slider_TemplateApplied" ValueChanged="SliderValueChanged" Minimum="0" Maximum="{Binding SongLength}" Value="{Binding PlaybackTime}" VerticalAlignment="Center" Margin="5,0" Foreground="Green"/>
           <TextBlock Grid.Column="2" Text="{Binding SongLength, StringFormat=\{0:0.0\}}" VerticalAlignment="Center" TextAlignment="Center" Foreground="White" Width="40"/>
         </Grid>
 

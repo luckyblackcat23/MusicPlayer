@@ -109,24 +109,35 @@
         {
             paused = false;
 
-            if (currentSongIndex >= musicQueue.Length) return;
+            if (currentSongIndex >= musicQueue.Length)
+                return;
 
             string currentPath = musicQueue[currentSongIndex];
 
-            outputDevice?.Stop(); // stop current playback
+            // Only recreate the audioFile if it's null or a different file
+            if (audioFile == null || audioFile.FileName != currentPath)
+            {
+                outputDevice?.Stop(); // Clean up any existing resources
 
-            await LoadAsync(currentPath);
+                await LoadAsync(currentPath);
 
-            clipLength = audioFile.TotalTime;
+                // Resume playback
+                audioFile.CurrentTime = playbackTime;
 
-            outputDevice = new WaveOutEvent();
-            outputDevice.PlaybackStopped += OnPlaybackStopped;
-            outputDevice.Init(audioFile);
+                clipLength = audioFile.TotalTime;
+
+                outputDevice = new WaveOutEvent();
+                outputDevice.Init(audioFile);
+            }
+            else
+            {
+                // Resume playback
+                audioFile.CurrentTime = playbackTime;
+            }
 
             outputDevice.Play();
 
             MainViewModel.Instance?.OnSongUpdate();
-            Debug.WriteLine("Now playing: " + audioFile.FileName);
         }
 
         public static void TogglePause()
@@ -137,13 +148,15 @@
                 Pause();
         }
 
-        public static void PlayNext()
+        public static async void PlayNext()
         {
             currentSongIndex++;
 
+            playbackTime = TimeSpan.Zero;
+
             if (currentSongIndex < musicQueue.Length)
             {
-                Play();
+                await Play();
             }
             else
             {
@@ -154,9 +167,11 @@
                 else
                     Pause();
             }
+
+            Debug.WriteLine("Now playing: " + audioFile.FileName);
         }
 
-        public static void PlayPrevious()
+        public static async void PlayPrevious()
         {
             currentSongIndex--;
 
@@ -166,7 +181,9 @@
                 currentSongIndex = 0;
             }
 
-            Play();
+            await Play();
+
+            Debug.WriteLine("Now playing: " + audioFile.FileName);
         }
 
         public static void Requeue(bool shuffle = false)
