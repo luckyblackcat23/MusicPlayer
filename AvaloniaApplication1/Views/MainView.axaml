@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:AvaloniaApplication1.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="1920" d:DesignHeight="1080"
+             x:Class="AvaloniaApplication1.Views.MainView"
+             x:DataType="vm:MainViewModel">
+  <Design.DataContext>
+    <!-- This only sets the DataContext for the previewer in an IDE,
+         to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+    <vm:MainViewModel />
+  </Design.DataContext>
+
+
+  <!-- Main Layout -->
+  <Grid RowDefinitions="2*, *" Background="Blue">
+
+    <!-- Bottom Panel (Album Art, Controls) -->
+    <Grid Grid.Row="1" ColumnDefinitions="Auto, *" Margin="5,5">
+
+      <!-- Album Art -->
+      <Border ClipToBounds="True">
+        <Image Source="{Binding AlbumCover}" Stretch="Uniform" />
+      </Border>
+
+      <!-- Info and Controls Section -->
+      <Grid Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Bottom" RowDefinitions="Auto, *" Background="Transparent" Height="100" >
+
+        <!-- Progress Bar with Time Labels -->
+        <Grid ColumnDefinitions="Auto, *, Auto">
+          <TextBlock Text="{Binding PlaybackTime, StringFormat=\{0:0.0\}}" VerticalAlignment="Center" Foreground="White" Width="40"/>
+            <Slider Grid.Column="1" ValueChanged="SliderValueChanged" Minimum="0" Maximum="{Binding SongLength}" Value="{Binding PlaybackTime}" VerticalAlignment="Center" Margin="5,0" Foreground="Green"/>
+          <TextBlock Grid.Column="2" Text="{Binding SongLength, StringFormat=\{0:0.0\}}" VerticalAlignment="Center" TextAlignment="Center" Foreground="White" Width="40"/>
+        </Grid>
+
+        <!-- Controls (Play, Pause, etc.) -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+          <Button Click="Previous" Height="40" Content="Previous"/>
+          <Button Click="Play" Height="40" Content="Play"/>
+          <Button Click="Next" Height="40" Content="Next"/>
+        </StackPanel>
+
+      </Grid>
+    </Grid>
+  </Grid>
+  
+</UserControl>
