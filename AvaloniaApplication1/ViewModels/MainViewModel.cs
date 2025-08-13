@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using AvaloniaApplication1.Views;
 
 namespace AvaloniaApplication1.ViewModels;
 
@@ -30,6 +33,16 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
     public DispatcherTimer _timer;
 
     public bool SliderHeld;
+    public ObservableCollection<Song> _songs;
+    public ObservableCollection<Song> Songs 
+    { 
+        get => _songs;
+        set 
+        {
+            _songs = value;
+            OnPropertyChanged(nameof(Songs));
+        } 
+    }
 
     public MainViewModel()
     {
@@ -47,6 +60,47 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
         _timer.Start();
 
         MusicPlayer.Initialize();
+
+        //change later
+        LoadSongs();
+    }
+
+    //i have no fuckin clue what to call this variable
+    List<Song> tempsongs = new();
+    
+    public async Task<Task> LoadSongs()
+    {
+        return Task.Run(() =>
+        {
+            //change later
+            foreach (string songPath in MusicPlayer.musicInitial)
+            {
+                string Title;
+                string Artist;
+                string Album;
+                string Year;
+                string Genre;
+
+                TagLib.File tfile = TagLib.File.Create(songPath);
+
+                Title = tfile.Tag.Title;
+
+                Artist = tfile.Tag.FirstPerformer;
+
+                Album = tfile.Tag.Album;
+
+                Year = tfile.Tag.Year.ToString();
+
+                //maybe change to the list of genres later or something
+                Genre = tfile.Tag.JoinedGenres;
+
+                tempsongs.Add(new Song(songPath, null, Title, Artist, Album, Year, Genre));
+
+                tfile.Dispose();
+            }
+
+            Songs = new ObservableCollection<Song>(tempsongs);
+        });
     }
 
     private double _PlaybackTime;
@@ -77,16 +131,16 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
         }
     }
 
-    private Bitmap? _albumCover;
-    public Bitmap? AlbumCover
+    private Bitmap? _currentlyPlayingAlbumCover;
+    public Bitmap? CurrentlyPlayingAlbumCover
     {
-        get => _albumCover;
+        get => _currentlyPlayingAlbumCover;
         set
         {
-            if (_albumCover != value)
+            if (_currentlyPlayingAlbumCover != value)
             {
-                _albumCover = value;
-                OnPropertyChanged(nameof(AlbumCover));
+                _currentlyPlayingAlbumCover = value;
+                OnPropertyChanged(nameof(CurrentlyPlayingAlbumCover));
             }
         }
     }
@@ -94,19 +148,16 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
     public void OnSongUpdate()
     {
         SongLength = MusicPlayer.clipLength.TotalSeconds;
-        AlbumCover = LoadAlbumImage();
+        CurrentlyPlayingAlbumCover = LoadAlbumImage(MusicPlayer.musicQueue[MusicPlayer.currentSongIndex]);
     }
 
-    private Bitmap LoadAlbumImage()
+    private Bitmap LoadAlbumImage(string songPath)
     {
-        string path;
         MemoryStream ms;
 
         if (MusicPlayer.musicQueue.Length > 0)
         {
-            path = MusicPlayer.musicQueue[MusicPlayer.currentSongIndex];
-
-            var tfile = TagLib.File.Create(path);
+            var tfile = TagLib.File.Create(songPath);
 
             if (tfile.Tag.Pictures.Length > 0)
             {
@@ -128,8 +179,9 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
         return new Bitmap(ms);
     }
 
-    private Bitmap LoadDefaultAlbumImage()
+    public Bitmap LoadDefaultAlbumImage()
     {
+        //change later
         string path = @"C:\Users\Jordan\Music\GameNameHereReplaceLater\Songs\The Vampire - DECO_27.mp3";
         var tfile = TagLib.File.Create(path);
         var ms = new MemoryStream(tfile.Tag.Pictures[0].Data.Data);

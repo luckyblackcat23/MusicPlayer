@@ -1,4 +1,10 @@
-﻿namespace AvaloniaApplication1.ViewModels
+﻿using Avalonia.Media.Imaging;
+using AvaloniaApplication1.ViewModels;
+using AvaloniaApplication1.Views;
+using System.ComponentModel;
+using TagLib;
+
+namespace AvaloniaApplication1.ViewModels
 {
     using System.Collections.Generic;
     using NAudio.Utils;
@@ -9,7 +15,7 @@
     using System.Threading.Tasks;
     using System.Numerics;
     using System.Threading;
-    using TagLib.Mpeg;
+    using DynamicData;
 
     internal static class MusicPlayer
     {
@@ -34,16 +40,30 @@
         //store paths
         public static List<string> musicInitial = new();
 
+        private static float _volume;
+        public static float volume
+        {
+            get
+            {
+                return _volume;
+            }
+            set 
+            {
+                _volume = value;
+
+                if (outputDevice != null)
+                    outputDevice.Volume = value;
+            }
+        }
+
         private static void OnPlaybackStopped(object? sender, StoppedEventArgs args)
         {
             outputDevice?.Dispose();
             outputDevice = null;
-            audioFile?.Dispose();
-            audioFile = null;
         }
 
         //still needs to run
-        public static void Initialize()
+        public static async void Initialize()
         {
             DirectoryInfo info = new DirectoryInfo(path);
 
@@ -53,28 +73,32 @@
 
             foreach (FileInfo file in fileInfo)
             {
-                temp.Add(file.FullName);
+                //file.exists might be unnecessary. might remove later if im really strapped on things to optimise
+                if (File.Exists(file.FullName) && file.Extension.Equals(".mp3"))
+                    temp.Add(file.FullName);
             }
 
             musicInitial = temp;
 
             Requeue(shuffle);
 
+            await Play();
+            Pause();
+
             MainViewModel.Instance._timer.Tick += (s, e) =>
             {
                 if (!paused && !MainViewModel.Instance.SliderHeld)
-                    playbackTime = outputDevice?.GetPositionTimeSpan() ?? TimeSpan.Zero;
+                    playbackTime = audioFile?.CurrentTime ?? TimeSpan.Zero;
+
+                Update();
             };
         }
 
         // Update is called once per frame
         public static void Update()
         {
-            if (audioFile != null && !MainViewModel.Instance.SliderHeld)
-                playbackTime = outputDevice.GetPositionTimeSpan();
-
             //once the song has ended
-            if (playbackTime >= clipLength)
+            if (outputDevice?.PlaybackState == PlaybackState.Stopped && !paused)
                 PlayNext();
         }
 
@@ -82,7 +106,7 @@
         {
             if (!paused && !MainViewModel.Instance.SliderHeld)
             {
-                playbackTime = outputDevice?.GetPositionTimeSpan() ?? playbackTime;
+                playbackTime = audioFile?.CurrentTime ?? playbackTime;
                 paused = true;
                 outputDevice?.Pause();
             }
@@ -119,28 +143,23 @@
 
             string currentPath = musicQueue[currentSongIndex];
 
-            // Only recreate the audioFile if it's null or a different file
-            if (audioFile == null || audioFile.FileName != currentPath)
-            {
-                outputDevice?.Stop(); // Clean up any existing resources
+            //clean up existing resources
+            outputDevice?.Stop();
 
-                await LoadAsync(currentPath);
+            var pbT = new TimeSpan(playbackTime.Ticks);
 
-                // Resume playback
-                audioFile.Skip(playbackTime);
+            await LoadAsync(currentPath);
+            
+            audioFile.CurrentTime = pbT;
 
-                clipLength = audioFile.TotalTime;
+            clipLength = audioFile.TotalTime;
 
-                outputDevice = new WaveOutEvent();
-                outputDevice.Init(audioFile);
-            }
-            else
-            {
-                // Resume playback
-                audioFile.CurrentTime = playbackTime;
-            }
+            outputDevice = new WaveOutEvent();
+            outputDevice.Init(audioFile);
 
-            outputDevice.Play();
+            outputDevice.PlaybackStopped += OnPlaybackStopped;
+
+            outputDevice?.Play();
 
             MainViewModel.Instance?.OnSongUpdate();
         }
@@ -148,7 +167,7 @@
         public static void TogglePause()
         {
             if (paused)
-                Play();
+                _ = Play();
             else
                 Pause();
         }
@@ -161,6 +180,7 @@
 
             if (currentSongIndex < musicQueue.Length)
             {
+                Stop();
                 await Play();
             }
             else
@@ -173,7 +193,7 @@
                     Pause();
             }
 
-            Debug.WriteLine("Now playing: " + audioFile.FileName);
+            Debug.WriteLine("Now playing: " + audioFile?.FileName);
         }
 
         public static async void PlayPrevious()
@@ -186,9 +206,10 @@
                 currentSongIndex = 0;
             }
 
+            Stop();
             await Play();
 
-            Debug.WriteLine("Now playing: " + audioFile.FileName);
+            Debug.WriteLine("Now playing: " + audioFile?.FileName);
         }
 
         public static void Requeue(bool shuffle = false)
@@ -216,6 +237,13 @@
 
             MainViewModel.Instance?.OnSongUpdate();
         }
+
+        public static void PlaySongFromQueue(string Song)
+        {
+            currentSongIndex = musicQueue.IndexOf(Song);
+            Stop();
+            Play();
+        }
     }
 
     //probably an easier way to do this rather than importing a new function
@@ -235,4 +263,60 @@
         }
     }
     */
+}
+
+
+public class Song : INotifyPropertyChanged
+{
+    public string SongPath;
+
+    private Bitmap? _albumCover;
+    public Bitmap? AlbumCover 
+    {
+        get
+        {
+            if (_albumCover != null)
+                return _albumCover;
+            else
+                return MainViewModel.Instance.LoadDefaultAlbumImage();
+        }
+        set
+        {
+            _albumCover = value;
+            OnPropertyChanged(nameof(AlbumCover));
+        }
+    }
+
+    public string Title { get; set; }
+    public string Artist { get; set; }
+    public string Album { get; set; }
+    public string Year { get; set; }
+    public string Genre { get; set; }
+
+    private double _duration;
+    public double Duration 
+    { 
+        get => _duration;
+        set
+        {
+            _duration = value;
+            OnPropertyChanged(nameof(Duration));
+        }
+    }
+
+    public Song(string songPath, Bitmap? albumCover = null, string title = "Unknown", string artist = "Unknown", string album = "Unknown", string year = "Unknown", string genre = "Unknown genre", double duration = 0)
+    {
+        SongPath = songPath;
+        AlbumCover = albumCover;
+        Title = title;
+        Artist = artist;
+        Album = album;
+        Year = year;
+        Genre = genre;
+        Duration = duration;
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged(string propertyName) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
