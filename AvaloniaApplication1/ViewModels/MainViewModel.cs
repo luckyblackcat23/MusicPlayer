@@ -62,41 +62,20 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
         MusicPlayer.Initialize();
 
         //change later
-        LoadSongs();
+        LoadSongRows();
     }
 
     //i have no fuckin clue what to call this variable
     List<Song> tempsongs = new();
     
-    public async Task<Task> LoadSongs()
+    public async Task<Task> LoadSongRows()
     {
         return Task.Run(() =>
         {
             //change later
             foreach (string songPath in MusicPlayer.musicInitial)
             {
-                string Title;
-                string Artist;
-                string Album;
-                string Year;
-                string Genre;
-
-                TagLib.File tfile = TagLib.File.Create(songPath);
-
-                Title = tfile.Tag.Title;
-
-                Artist = tfile.Tag.FirstPerformer;
-
-                Album = tfile.Tag.Album;
-
-                Year = tfile.Tag.Year.ToString();
-
-                //maybe change to the list of genres later or something
-                Genre = tfile.Tag.JoinedGenres;
-
-                tempsongs.Add(new Song(songPath, null, Title, Artist, Album, Year, Genre));
-
-                tfile.Dispose();
+                tempsongs.Add(new Song(songPath));
             }
 
             Songs = new ObservableCollection<Song>(tempsongs);
@@ -186,7 +165,7 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
         var tfile = TagLib.File.Create(path);
         var ms = new MemoryStream(tfile.Tag.Pictures[0].Data.Data);
         ms.Seek(0, SeekOrigin.Begin);
-        return new Bitmap(ms);
+        return new Bitmap(ms).CreateScaledBitmap(new Avalonia.PixelSize(64, 64));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

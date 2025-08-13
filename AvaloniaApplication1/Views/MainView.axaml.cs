@@ -6,8 +6,11 @@ using Avalonia.Media.Imaging;
 using AvaloniaApplication1.ViewModels;
 using DynamicData;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace AvaloniaApplication1.Views;
 
@@ -82,6 +85,22 @@ public partial class MainView : UserControl
         {
             TagLib.File tfile = TagLib.File.Create(song.SongPath);
 
+            song.Title = tfile.Tag.Title;
+
+            song.Artist = tfile.Tag.FirstPerformer;
+
+            song.Album = tfile.Tag.Album;
+
+            song.Year = tfile.Tag.Year.ToString();
+
+            //maybe change to the list of genres later or something
+            song.Genre = tfile.Tag.JoinedGenres;
+
+            //i should find a way to do this with tfile so i can avoid having to create a FileReader
+            var songFile = new NAudio.Wave.AudioFileReader(song.SongPath);
+            song.Duration = songFile.TotalTime.TotalSeconds;
+            songFile.Dispose();
+
             //get album image
             if (tfile.Tag.Pictures.Length > 0)
             {
@@ -91,7 +110,7 @@ public partial class MainView : UserControl
 
                 try
                 {
-                    song.AlbumCover = new Bitmap(ms);
+                    song.AlbumCover = new Bitmap(ms).CreateScaledBitmap(new Avalonia.PixelSize(124, 124)); ;
                 }
                 catch (Exception ex)
                 {
@@ -106,11 +125,6 @@ public partial class MainView : UserControl
                 //Debug.WriteLine("file does not contain album art. album replaced with default image");
                 song.AlbumCover = MainViewModel.Instance.LoadDefaultAlbumImage();
             }
-
-            //i should find a way to do this with tfile so i can avoid having to create a FileReader
-            var songFile = new NAudio.Wave.AudioFileReader(song.SongPath);
-
-            song.Duration = songFile.TotalTime.TotalSeconds;
 
             tfile.Dispose();
         }

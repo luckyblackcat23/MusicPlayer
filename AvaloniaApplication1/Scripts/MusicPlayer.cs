@@ -58,8 +58,7 @@ namespace AvaloniaApplication1.ViewModels
 
         private static void OnPlaybackStopped(object? sender, StoppedEventArgs args)
         {
-            outputDevice?.Dispose();
-            outputDevice = null;
+
         }
 
         //still needs to run
@@ -136,6 +135,7 @@ namespace AvaloniaApplication1.ViewModels
 
         public static async Task Play()
         {
+
             paused = false;
 
             if (currentSongIndex >= musicQueue.Length)
@@ -145,6 +145,8 @@ namespace AvaloniaApplication1.ViewModels
 
             //clean up existing resources
             outputDevice?.Stop();
+            outputDevice?.Dispose();
+            outputDevice = null;
 
             var pbT = new TimeSpan(playbackTime.Ticks);
 
@@ -287,11 +289,60 @@ public class Song : INotifyPropertyChanged
         }
     }
 
-    public string Title { get; set; }
-    public string Artist { get; set; }
-    public string Album { get; set; }
-    public string Year { get; set; }
-    public string Genre { get; set; }
+    public string _title;
+    public string Title 
+    {
+        get => _title;
+        set
+        {
+            _title = value;
+            OnPropertyChanged(nameof(Title));
+        }
+    }
+
+    public string _artist;
+    public string Artist 
+    { 
+        get => _artist;
+        set
+        {
+            _artist = value;
+            OnPropertyChanged(nameof(Artist));
+        }
+    }
+
+    public string _album;
+    public string Album 
+    { 
+        get => _album;
+        set
+        {
+            _album = value;
+            OnPropertyChanged(nameof(Album));
+        }
+    }
+
+    public string _year;
+    public string Year 
+    { 
+        get => _year;
+        set
+        {
+            _year = value;
+            OnPropertyChanged(nameof(Year));
+        }
+    }
+
+    public string _genre;
+    public string Genre 
+    { 
+        get => _genre;
+        set
+        {
+            _genre = value;
+            OnPropertyChanged(nameof(Genre));
+        }
+    }
 
     private double _duration;
     public double Duration 

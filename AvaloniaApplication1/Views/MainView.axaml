@@ -29,7 +29,7 @@
       <!-- Song Display List -->
       <DataGrid x:Name="SongList" ItemsSource="{Binding Songs}" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="DataGrid_LoadingRow" UnloadingRow="DataGrid_UnloadingRow">
         <DataGrid.Columns>
-          <DataGridTemplateColumn Width="80">
+          <DataGridTemplateColumn Width="64">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <Image Source="{Binding AlbumCover}" PointerReleased="Image_PointerReleased"/>
