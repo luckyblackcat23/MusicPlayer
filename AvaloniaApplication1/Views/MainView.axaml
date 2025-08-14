@@ -25,42 +25,44 @@
       <Image Source="{Binding CurrentlyPlayingAlbumCover}" Grid.Row="1" Height="300" Width="300" Stretch="UniformToFill"/>
     </Grid>
     
-    <Grid Grid.Column="1" RowDefinitions="*,  Auto">
+    <Grid Grid.Column="1" RowDefinitions="Auto, *, Auto">
       <!-- Song Display List -->
-      <DataGrid x:Name="SongList" ItemsSource="{Binding Songs}" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="DataGrid_LoadingRow" UnloadingRow="DataGrid_UnloadingRow">
-        <DataGrid.Columns>
-          <DataGridTemplateColumn Width="64">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <Image Source="{Binding AlbumCover}" PointerReleased="Image_PointerReleased"/>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
+        <TextBox x:Name="SongSearchBar"/>
+          
+        <DataGrid x:Name="SongList" Grid.Row="1" ItemsSource="{Binding CurrentlyDisplayedSongs}" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="DataGrid_LoadingRow" UnloadingRow="DataGrid_UnloadingRow">
+          <DataGrid.Columns>
+            <DataGridTemplateColumn Width="64">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <Image Source="{Binding AlbumCover}" PointerReleased="Image_PointerReleased"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
 
-          <DataGridTextColumn Header="Title" Width="*" Binding="{Binding Title}">
-          </DataGridTextColumn>
+            <DataGridTextColumn Header="Title" Width="*" Binding="{Binding Title}">
+            </DataGridTextColumn>
 
-          <DataGridTextColumn Header="Artist" Width="*" Binding="{Binding Artist}">
-          </DataGridTextColumn>
+            <DataGridTextColumn Header="Artist" Width="*" Binding="{Binding Artist}">
+            </DataGridTextColumn>
 
-          <DataGridTextColumn Header="Album" Width="*" Binding="{Binding Album}">
-          </DataGridTextColumn>
+            <DataGridTextColumn Header="Album" Width="*" Binding="{Binding Album}">
+            </DataGridTextColumn>
 
-          <DataGridTextColumn Header="Year" Width="*" Binding="{Binding Year}">
-          </DataGridTextColumn>
+            <DataGridTextColumn Header="Year" Width="*" Binding="{Binding Year}">
+            </DataGridTextColumn>
 
-          <DataGridTextColumn Header="Genre" Width="*" Binding="{Binding Genre}">
-          </DataGridTextColumn>
+            <DataGridTextColumn Header="Genre" Width="*" Binding="{Binding Genre}">
+            </DataGridTextColumn>
 
-          <DataGridTextColumn Header="Duration" Width="*" Binding="{Binding Duration, StringFormat=\{0:0.0\}}">
-          </DataGridTextColumn>
+            <DataGridTextColumn Header="Duration" Width="*" Binding="{Binding Duration, StringFormat=\{0:0.0\}}">
+            </DataGridTextColumn>
 
-        </DataGrid.Columns>
-      </DataGrid>
+          </DataGrid.Columns>
+        </DataGrid>
 
       <!-- Bottom Panel (Controls) -->
-      <Rectangle Fill="#0011ab" Grid.Row="1"></Rectangle>
-      <Grid Grid.Row="1" ColumnDefinitions="Auto, *" Grid.Column="1" Margin="5,5">
+      <Rectangle Fill="#0011ab" Grid.Row="2"></Rectangle>
+      <Grid Grid.Row="2" ColumnDefinitions="Auto, *" Grid.Column="1" Margin="5,5">
 
         <!-- Info and Controls Section -->
         <Grid Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Bottom" RowDefinitions="Auto, *" Background="Transparent" Height="100" >

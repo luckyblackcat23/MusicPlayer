@@ -1,16 +1,14 @@
-﻿using Avalonia.Controls;
+﻿using AvaloniaApplication1.ViewModels;
 using Avalonia.Controls.Primitives;
-using Avalonia.Input;
-using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
-using AvaloniaApplication1.ViewModels;
-using DynamicData;
+using Avalonia.Interactivity;
+using System.Diagnostics;
+using Avalonia.Controls;
+using Avalonia.Input;
+using System.IO;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.IO;
-using System.Threading.Tasks;
+using Kawazu;
 
 namespace AvaloniaApplication1.Views;
 
@@ -25,6 +23,8 @@ public partial class MainView : UserControl
         InitializeComponent();
         PlaybackSlider.AddHandler(PointerPressedEvent, Slider_PointerPressed, RoutingStrategies.Tunnel);
         PlaybackSlider.AddHandler(PointerReleasedEvent, Slider_PointerReleased, RoutingStrategies.Tunnel);
+
+        SongSearchBar.TextChanged += TextBox_TextChanged;
     }
 
     private void PreviousButton(object? sender, RoutedEventArgs e)
@@ -79,58 +79,81 @@ public partial class MainView : UserControl
         MusicPlayer.volume = (float)e.NewValue;
     }
 
-    private void DataGrid_LoadingRow(object? sender, Avalonia.Controls.DataGridRowEventArgs e)
+    private async void DataGrid_LoadingRow(object? sender, DataGridRowEventArgs e)
     {
         if (e.Row.DataContext is Song song)
         {
-            TagLib.File tfile = TagLib.File.Create(song.SongPath);
-
-            song.Title = tfile.Tag.Title;
-
-            song.Artist = tfile.Tag.FirstPerformer;
-
-            song.Album = tfile.Tag.Album;
-
-            song.Year = tfile.Tag.Year.ToString();
-
-            //maybe change to the list of genres later or something
-            song.Genre = tfile.Tag.JoinedGenres;
-
-            //i should find a way to do this with tfile so i can avoid having to create a FileReader
-            var songFile = new NAudio.Wave.AudioFileReader(song.SongPath);
-            song.Duration = songFile.TotalTime.TotalSeconds;
-            songFile.Dispose();
-
-            //get album image
-            if (tfile.Tag.Pictures.Length > 0)
+            using (TagLib.File tfile = TagLib.File.Create(song.SongPath))
             {
-                MemoryStream ms;
-                ms = new MemoryStream(tfile.Tag.Pictures[0].Data.Data);
-                ms.Seek(0, SeekOrigin.Begin);
-
-                try
+                //not actually sure if this is more efficient. check later.
+                if (MainViewModel.Instance.songsFinishedCaching)
                 {
-                    song.AlbumCover = new Bitmap(ms).CreateScaledBitmap(new Avalonia.PixelSize(124, 124)); ;
+                    foreach (Song CachedSong in MainViewModel.Instance.CachedSongs)
+                    {
+                        if (CachedSong.SongPath == song.SongPath)
+                        {
+                            song = CachedSong;
+                        }
+                    }
                 }
-                catch (Exception ex)
+                else
                 {
-                    Debug.WriteLine(ex.Message);
+                    KawazuConverter converter = new KawazuConverter();
+
+                    song.Title = tfile.Tag.Title;
+
+                    if (song.Title?.Length > 0)
+                        song.RomanisedTitle = await converter.Convert(song.Title, To.Romaji);
+
+                    song.Artist = tfile.Tag.FirstPerformer;
+
+                    if (song.Artist?.Length > 0)
+                        song.RomanisedArtist = await converter.Convert(song.Artist, To.Romaji);
+
+                    song.Album = tfile.Tag.Album;
+
+                    if (song.Album?.Length > 0)
+                        song.RomanisedAlbum = await converter.Convert(song.Album, To.Romaji);
+
+                    song.Year = tfile.Tag.Year;
+
+                    //maybe change to the list of genres later or something
+                    song.Genre = tfile.Tag.JoinedGenres;
+
+                    song.Duration = tfile.Properties.Duration.TotalSeconds;
+
+                    converter.Dispose();
+                }
+
+                //get album image
+                if (tfile.Tag.Pictures.Length > 0)
+                {
+                    MemoryStream ms;
+                    ms = new MemoryStream(tfile.Tag.Pictures[0].Data.Data);
+                    ms.Seek(0, SeekOrigin.Begin);
+
+                    try
+                    {
+                        song.AlbumCover = new Bitmap(ms).CreateScaledBitmap(new Avalonia.PixelSize(124, 124)); ;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine(ex.Message);
+                        song.AlbumCover = MainViewModel.Instance.LoadDefaultAlbumImage();
+                    }
+
+                    ms.Dispose();
+                }
+                else
+                {
+                    //Debug.WriteLine("file does not contain album art. album replaced with default image");
                     song.AlbumCover = MainViewModel.Instance.LoadDefaultAlbumImage();
                 }
-
-                ms.Dispose();
-            }
-            else
-            {
-                //Debug.WriteLine("file does not contain album art. album replaced with default image");
-                song.AlbumCover = MainViewModel.Instance.LoadDefaultAlbumImage();
-            }
-
-            tfile.Dispose();
+            }           
         }
     }
 
-    private void DataGrid_UnloadingRow(object? sender, Avalonia.Controls.DataGridRowEventArgs e)
+    private void DataGrid_UnloadingRow(object? sender, DataGridRowEventArgs e)
     {
         if (e.Row.DataContext is Song song)
         {
@@ -140,7 +163,7 @@ public partial class MainView : UserControl
     }
     private void Image_PointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (sender is Avalonia.Controls.Control control)
+        if (sender is Control control)
         {
             var rowDataContext = control.DataContext;
             // rowDataContext is the item bound to the row
@@ -150,6 +173,41 @@ public partial class MainView : UserControl
             {
                 MusicPlayer.PlaySongFromQueue(song.SongPath);
             }
+        }
+    }
+
+    private async void TextBox_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if(SongSearchBar.Text?.Length > 0)
+        {
+            List<Song> temp = new List<Song>();
+
+            KawazuConverter converter = new KawazuConverter();
+
+            string romanisedText = await converter.Convert(SongSearchBar.Text, To.Romaji);
+
+            foreach (Song song in MainViewModel.Instance.CurrentSongs)
+            {
+                if (song.Title?.Length > 0)
+                    if (song.Title.ToLower().Contains(romanisedText.ToLower()))
+                        temp.Add(song);
+
+                if (song.Artist?.Length > 0)
+                    if (song.Artist.ToLower().Contains(romanisedText.ToLower()))
+                        temp.Add(song);
+
+                if (song.RomanisedTitle?.Length > 0)
+                    if (song.RomanisedTitle.ToLower().Contains(romanisedText.ToLower()))
+                        temp.Add(song);
+
+                if (song.RomanisedArtist?.Length > 0)
+                    if (song.RomanisedArtist.ToLower().Contains(romanisedText.ToLower()))
+                        temp.Add(song);
+            }
+
+            converter.Dispose();
+
+            MainViewModel.Instance.CurrentlyDisplayedSongs = new System.Collections.ObjectModel.ObservableCollection<Song>(temp);
         }
     }
 }

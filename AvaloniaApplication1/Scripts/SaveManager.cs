@@ -5,9 +5,6 @@ using System.Diagnostics;
 using System.IO;
 
 //didn't wanna use some overcomplicated json so instead i just made my own overcomplicated save system 
-
-//couldn't think of a way to reference the save files without just referencing the file name as a string.
-//possible improvement for later could be to find a way to have intellisense pickup the SaveFile names somehow.
 public static class SaveManager
 {
     //list containing the name of the save files
@@ -34,31 +31,16 @@ public static class SaveManager
         return null;
     }
 
-    //required data of each save file of name
+    // required data of each save file of name
     public static List<SaveFile> saveFileData = new();
+
+    // Reccomended that SaveFiles is stored in some Globals class.
+
+    /// <summary>
+    /// Generic data
+    /// </summary>
     public static SaveFile MainSave = new("Main.txt");
-
-    public class SaveFile
-    {
-        /// <summary>
-        /// Include .txt at the end unless you plan to use another filetype
-        /// </summary>
-        public string SaveFileName = "Main.txt";
-        public string SaveFilePath()
-        { 
-            //change later
-            return Path.Combine(Globals.SavePath, SaveFileName); 
-        }
-
-        public string[] groups = new string[] { "General", "Audio" };
-
-        public SaveFile(string name)
-        {
-            saveFileData.Add(this);
-
-            SaveFileName = name;
-        }
-    }
+    public static SaveFile Settings = new("Settings.txt");
 
     public static List<SaveVariable> Variables = new();
 
@@ -341,5 +323,32 @@ public static class SaveManager
                 }
             }
         }
+    }
+}
+
+public class SaveFile
+{
+    /// <summary>
+    /// Include .txt at the end unless you plan to use another filetype
+    /// </summary>
+    public string SaveFileName = "Main.txt";
+    public string SaveFilePath()
+    {
+        //change later
+        return Path.Combine(Globals.SavePath, SaveFileName);
+    }
+
+    public static implicit operator string(SaveFile obj)
+    {
+        return obj.SaveFileName;
+    }
+
+    public string[] groups = new string[] { "General", "Audio" };
+
+    public SaveFile(string name)
+    {
+        SaveManager.saveFileData.Add(this);
+
+        SaveFileName = name;
     }
 }

@@ -7,7 +7,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
-using AvaloniaApplication1.Views;
+using Kawazu;
 
 namespace AvaloniaApplication1.ViewModels;
 
@@ -33,14 +33,14 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
     public DispatcherTimer _timer;
 
     public bool SliderHeld;
-    public ObservableCollection<Song> _songs;
-    public ObservableCollection<Song> Songs 
+    public ObservableCollection<Song> _currentlyDisplayedSongs;
+    public ObservableCollection<Song> CurrentlyDisplayedSongs 
     { 
-        get => _songs;
+        get => _currentlyDisplayedSongs;
         set 
         {
-            _songs = value;
-            OnPropertyChanged(nameof(Songs));
+            _currentlyDisplayedSongs = value;
+            OnPropertyChanged(nameof(CurrentlyDisplayedSongs));
         } 
     }
 
@@ -61,26 +61,90 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
 
         MusicPlayer.Initialize();
 
-        //change later
-        LoadSongRows();
+        Initalization();
     }
 
-    //i have no fuckin clue what to call this variable
-    List<Song> tempsongs = new();
-    
-    public async Task<Task> LoadSongRows()
+    private async void Initalization()
     {
-        return Task.Run(() =>
+        //change later
+        foreach (string songPath in MusicPlayer.musicInitial)
         {
-            //change later
-            foreach (string songPath in MusicPlayer.musicInitial)
-            {
-                tempsongs.Add(new Song(songPath));
-            }
+            CachedSongs.Add(new Song(songPath));
+        }
 
-            Songs = new ObservableCollection<Song>(tempsongs);
+        CurrentSongs = new List<Song>(CachedSongs);
+        CurrentlyDisplayedSongs = new ObservableCollection<Song>(CachedSongs);
+
+        await CacheSongs();
+
+        songsFinishedCaching = true;
+    }
+
+    /// <summary>
+    /// All songs stored in memory
+    /// </summary>
+    public List<Song> CachedSongs = new();
+    public List<Song> CurrentSongs = new();
+
+    public bool songsFinishedCaching;
+
+    private async Task CacheSongs()
+    {
+        // Create converter only once
+        using var converter = new KawazuConverter();
+
+        // Parallel processing (limit to a safe degree, e.g., 4 threads)
+        await Parallel.ForEachAsync(CachedSongs, new ParallelOptions { MaxDegreeOfParallelism = 4 }, async (song, _) =>
+        {
+            try
+            {
+                using var tfile = TagLib.File.Create(song.SongPath);
+
+                song.Title = tfile.Tag.Title;
+                song.Artist = tfile.Tag.FirstPerformer;
+                song.Album = tfile.Tag.Album;
+                song.Year = tfile.Tag.Year;
+                song.Genre = tfile.Tag.JoinedGenres;
+
+                // Romanisation only if needed
+                if (!string.IsNullOrWhiteSpace(song.Title))
+                    song.RomanisedTitle = await converter.Convert(song.Title, To.Romaji);
+                if (!string.IsNullOrWhiteSpace(song.Artist))
+                    song.RomanisedArtist = await converter.Convert(song.Artist, To.Romaji);
+                if (!string.IsNullOrWhiteSpace(song.Album))
+                    song.RomanisedAlbum = await converter.Convert(song.Album, To.Romaji);
+
+                // Use TagLib for duration (avoids NAudio extra read)
+                var properties = tfile.Properties;
+                song.Duration = properties.Duration.TotalSeconds;
+
+                // Album art (optional: lazy-load later)
+                if (tfile.Tag.Pictures.Length > 0)
+                {
+                    using var ms = new MemoryStream(tfile.Tag.Pictures[0].Data.Data);
+                    ms.Seek(0, SeekOrigin.Begin);
+
+                    try
+                    {
+                        song.AlbumCover = new Bitmap(ms).CreateScaledBitmap(new Avalonia.PixelSize(124, 124));
+                    }
+                    catch
+                    {
+                        song.AlbumCover = LoadDefaultAlbumImage();
+                    }
+                }
+                else
+                {
+                    song.AlbumCover = LoadDefaultAlbumImage();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error processing {song.SongPath}: {ex.Message}");
+            }
         });
     }
+
 
     private double _PlaybackTime;
     public double PlaybackTime

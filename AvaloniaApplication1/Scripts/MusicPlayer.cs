@@ -1,19 +1,16 @@
 ﻿using Avalonia.Media.Imaging;
 using AvaloniaApplication1.ViewModels;
-using AvaloniaApplication1.Views;
+using System.Collections.Generic;
 using System.ComponentModel;
-using TagLib;
 
 namespace AvaloniaApplication1.ViewModels
 {
     using System.Collections.Generic;
-    using NAudio.Utils;
     using NAudio.Wave;
     using System.IO;
     using System;
     using System.Diagnostics;
     using System.Threading.Tasks;
-    using System.Numerics;
     using System.Threading;
     using DynamicData;
 
@@ -135,7 +132,6 @@ namespace AvaloniaApplication1.ViewModels
 
         public static async Task Play()
         {
-
             paused = false;
 
             if (currentSongIndex >= musicQueue.Length)
@@ -289,7 +285,7 @@ public class Song : INotifyPropertyChanged
         }
     }
 
-    public string _title;
+    private string _title;
     public string Title 
     {
         get => _title;
@@ -300,7 +296,18 @@ public class Song : INotifyPropertyChanged
         }
     }
 
-    public string _artist;
+    private string _romanisedTitle;
+    public string RomanisedTitle
+    {
+        get => _romanisedTitle;
+        set
+        {
+            _romanisedTitle = value;
+            OnPropertyChanged(nameof(RomanisedTitle));
+        }
+    }
+
+    private string _artist;
     public string Artist 
     { 
         get => _artist;
@@ -311,7 +318,18 @@ public class Song : INotifyPropertyChanged
         }
     }
 
-    public string _album;
+    private string _romanisedArtist;
+    public string RomanisedArtist
+    {
+        get => _romanisedArtist;
+        set
+        {
+            _romanisedArtist = value;
+            OnPropertyChanged(nameof(RomanisedArtist));
+        }
+    }
+
+    private string _album;
     public string Album 
     { 
         get => _album;
@@ -322,8 +340,19 @@ public class Song : INotifyPropertyChanged
         }
     }
 
-    public string _year;
-    public string Year 
+    private string _romanisedAlbum;
+    public string RomanisedAlbum
+    {
+        get => _romanisedAlbum;
+        set
+        {
+            _romanisedAlbum = value;
+            OnPropertyChanged(nameof(RomanisedAlbum));
+        }
+    }
+
+    private uint _year;
+    public uint Year 
     { 
         get => _year;
         set
@@ -333,7 +362,7 @@ public class Song : INotifyPropertyChanged
         }
     }
 
-    public string _genre;
+    private string _genre;
     public string Genre 
     { 
         get => _genre;
@@ -355,19 +384,39 @@ public class Song : INotifyPropertyChanged
         }
     }
 
-    public Song(string songPath, Bitmap? albumCover = null, string title = "Unknown", string artist = "Unknown", string album = "Unknown", string year = "Unknown", string genre = "Unknown genre", double duration = 0)
+    public Song(string songPath, Bitmap? albumCover = null, string title = "Unknown", string romanisedTitle = "Unknown", string artist = "Unknown", string romanisedArtist = "Unkown", string album = "Unknown", string romanisedAlbum = "Unkown", uint year = 0, string genre = "Unknown genre", double duration = 0)
     {
         SongPath = songPath;
         AlbumCover = albumCover;
         Title = title;
+        RomanisedTitle = romanisedTitle;
         Artist = artist;
+        RomanisedArtist = artist;
         Album = album;
+        RomanisedAlbum = album;
         Year = year;
         Genre = genre;
         Duration = duration;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected void OnPropertyChanged(string propertyName) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+}
+
+public class Playlist : INotifyPropertyChanged
+{
+    public List<Song> Songs;
+    public string PlaylistCoverPath;
+
+    public Bitmap GetAlbumCover()
+    {
+        return new Bitmap(PlaylistCoverPath);
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     protected void OnPropertyChanged(string propertyName) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

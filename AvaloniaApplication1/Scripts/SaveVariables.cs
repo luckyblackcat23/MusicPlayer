@@ -1,6 +1,15 @@
 // Usage example:
 
-// public SaveFloat MasterVolume = new SaveFloat("Master Volume", true, 1, 0);
+// public SaveFloat MasterVolume = new SaveFloat("Master Volume", Main.txt, true, 1, 0);
+// or just
+// public SaveFloat MasterVolume = new SaveFloat("Master Volume" SaveOnChange: false);
+
+// public SaveFloat TutorialComplete = new SaveBool("Completed Tutorial");
+// ...
+// if(TutorialComplete)
+// {
+//     //code here...
+// }
 
 using System;
 using System.Diagnostics;
@@ -86,8 +95,6 @@ public abstract class SaveVariable
 
 public class SaveInt : SaveVariable
 {
-    bool b;
-
     //honestly i dont fully understand why i need some of this although the code doesn't work without it.
     public SaveInt(string SavedName, string _SaveFile = "Main.txt", int DefaultValue = 0, bool SaveOnChange = true, int Group = default) : base(SavedName, _SaveFile, SaveOnChange, Group) 
     {
@@ -374,6 +381,59 @@ public class SaveEnum<T> : SaveVariable where T : struct, Enum
         if (Enum.TryParse(ReadSavedStringValue(), out T result))
         {
             return result;
+        }
+        else
+        {
+            return defaultValue;
+        }
+    }
+}
+
+public class SaveAlbum : SaveVariable
+{
+    public SaveAlbum(string SavedName, string _SaveFile = "Main.txt", bool DefaultValue = false, bool SaveOnChange = true, int Group = default) : base(SavedName, _SaveFile, SaveOnChange, Group)
+    {
+        defaultValue = DefaultValue;
+    }
+
+    bool defaultValue;
+
+    private bool _value;
+    public bool Value
+    {
+        get
+        {
+            return _value;
+        }
+        set
+        {
+            _value = value;
+
+            if (saveOnChange)
+                Save();
+        }
+    }
+
+    public override string SavedString() => savedName + " : " + Value.ToString();
+
+    public override void UpdateValue()
+    {
+        if (bool.TryParse(ReadSavedStringValue(), out bool val))
+        {
+            Value = val;
+        }
+        else
+        {
+            Value = defaultValue;
+            Debug.WriteLine("Variable  `" + savedName + "` was not found when attempting to update value. value set to " + defaultValue);
+        }
+    }
+
+    public bool ReadSavedValue()
+    {
+        if (bool.TryParse(ReadSavedStringValue(), out bool val))
+        {
+            return val;
         }
         else
         {
