@@ -9,6 +9,7 @@ using System.IO;
 using System;
 using System.Collections.Generic;
 using Kawazu;
+using Avalonia;
 
 namespace AvaloniaApplication1.Views;
 
@@ -209,5 +210,10 @@ public partial class MainView : UserControl
 
             MainViewModel.Instance.CurrentlyDisplayedSongs = new System.Collections.ObjectModel.ObservableCollection<Song>(temp);
         }
+    }
+
+    private void FullScreen(object? sender, RoutedEventArgs e)
+    {
+        new SaveFile("TestPlaylist");
     }
 }

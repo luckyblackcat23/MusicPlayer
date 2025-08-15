@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http.Headers;
 
 //didn't wanna use some overcomplicated json so instead i just made my own overcomplicated save system 
 public static class SaveManager
@@ -20,7 +21,7 @@ public static class SaveManager
         return temp;
     }
 
-    public static SaveFile StringToSave(string saveFileName)
+    public static SaveFile FindSaveOfName(string saveFileName)
     {
         foreach (SaveFile file in saveFileData)
         {
@@ -43,26 +44,6 @@ public static class SaveManager
     public static SaveFile Settings = new("Settings.txt");
 
     public static List<SaveVariable> Variables = new();
-
-    /// <summary> 
-    /// Writes string to line
-    /// <para>
-    /// Warning: this will overwrite a line. if you dont know exactly what will be on that line do not use this function
-    /// </para> 
-    /// </summary>
-    public static void lineChanger(string newText, int lineToEdit, SaveFile save)
-    {
-        string[] arrLine = ReadAll().ToArray();
-        arrLine[lineToEdit - 1] = newText;
-        using (StreamWriter outputFile = new StreamWriter(save.SaveFilePath()))
-        {
-            foreach (string line in arrLine)
-            {
-                outputFile.WriteLine(line);
-            }
-            outputFile.Close();
-        }
-    }
 
     /// <summary> Saves all variables, assigned to this SaveFile, to the associated file  </summary>
     public static void SaveAll()
@@ -103,7 +84,6 @@ public static class SaveManager
         }
     }
 
-
     public static List<string> ReadAll()
     {
         List<string> list = new List<string>();
@@ -128,9 +108,83 @@ public static class SaveManager
         return list;
     }
 
-    public static string FindVariable(string SavedName)
+    public delegate void OnInitializeDelegate();
+    public static OnInitializeDelegate OnInitialize;
+}
+
+public class SaveFile
+{
+    public List<SaveVariable> Variables;
+
+    private static SaveFile main;
+    public static SaveFile Main()
     {
-        foreach (string line in ReadAll())
+        if (main == null)
+            return new("Main.txt");
+        else
+            return main;
+    }
+
+    /// <summary>
+    /// Include .txt at the end unless you plan to use another filetype
+    /// </summary> 
+    public string SaveFileName = "Main.txt";
+    public string SaveFilePath()
+    {
+        //change later
+        return Path.Combine(Globals.SavePath, SaveFileName);
+    }
+
+    public static implicit operator string(SaveFile obj)
+    {
+        return obj.SaveFileName;
+    }
+
+    public string[] groups = new string[] { "General" };
+
+    public List<string> ReadSaveFile()
+    {
+        List<string> list = new List<string>();
+
+        using (StreamReader outputFile = File.OpenText(SaveFilePath()))
+        {
+            string line = outputFile.ReadLine();
+
+            while (line != null)
+            {
+                list.Add(line);
+
+                line = outputFile.ReadLine();
+            }
+
+            outputFile.Close();
+        }
+        return list;
+    }
+
+    /// <summary> 
+    /// Writes string to line
+    /// <para>
+    /// Warning: this will overwrite a line. if you dont know exactly what will be on that line do not use this function
+    /// </para> 
+    /// </summary>
+    public void lineChanger(string newText, int lineToEdit)
+    {
+        string[] arrLine = ReadSaveFile().ToArray();
+        arrLine[lineToEdit - 1] = newText;
+        using (StreamWriter outputFile = new StreamWriter(SaveFilePath()))
+        {
+            foreach (string line in arrLine)
+            {
+                outputFile.WriteLine(line);
+            }
+            outputFile.Close();
+        }
+    }
+
+    public string FindVariable(string SavedName)
+    {
+        foreach (string line in ReadSaveFile())
         {
             if (line.StartsWith(SavedName + " : "))
             {
@@ -143,9 +197,9 @@ public static class SaveManager
         return null;
     }
 
-    public static string FindVariable(string SavedName, out int lineNumber)
+    public string FindVariable(string SavedName, out int lineNumber)
     {
-        string[] lines = ReadAll().ToArray();
+        string[] lines = ReadSaveFile().ToArray();
 
         for (int i = 0; i < lines.Length; i++)
         {
@@ -163,9 +217,9 @@ public static class SaveManager
         return null;
     }
 
-    public static string FindVariableValue(string SavedName)
+    public string FindVariableValue(string SavedName)
     {
-        foreach (string line in ReadAll())
+        foreach (string line in ReadSaveFile())
         {
             if (line.StartsWith(SavedName + " : "))
             {
@@ -178,41 +232,118 @@ public static class SaveManager
         return "";
     }
 
-    public static void UpdateVariable(SaveVariable variable)
+    public void UpdateVariable(SaveVariable variable)
     {
         FindVariable(variable.savedName, out int line);
 
-        lineChanger(variable.SavedString(), line, StringToSave(variable.saveFile));
+        lineChanger(variable.SavedString(), line);
     }
 
-    public delegate void OnInitializeDelegate();
-    public static OnInitializeDelegate OnInitialize;
 
-    public static void Initialize()
+    public SaveFile(string name)
     {
-        if (OnInitialize != null)
-            OnInitialize();
+        SaveManager.saveFileData.Add(this);
+
+        SaveFileName = name;
 
         if (!Directory.Exists(Globals.SavePath))
         {
             Directory.CreateDirectory(Globals.SavePath);
 
-            foreach (SaveFile saveFile in saveFileData)
+            using (StreamWriter outputFile = File.CreateText(SaveFilePath()))
             {
-                using (StreamWriter outputFile = File.CreateText(saveFile.SaveFilePath()))
+                if (groups.Length > 0)
                 {
-                    if(saveFile.groups.Length > 0)
+                    for (int i = 0; i < groups.Length; i++)
                     {
-                        for (int i = 0; i < saveFile.groups.Length; i++)
+                        outputFile.WriteLine(groups[i]);
+                        outputFile.WriteLine();
+
+                        foreach (SaveVariable variable in Variables)
                         {
-                            outputFile.WriteLine(saveFile.groups[i]);
+                            if (variable.Equals(SaveFileName) && variable.group == i)
+                            {
+                                outputFile.WriteLine(variable.SavedString());
+                            }
+                        }
+
+                        outputFile.WriteLine();
+                    }
+                }
+                else
+                {
+                    foreach (SaveVariable variable in Variables)
+                    {
+                        if (variable.saveFile.Equals(SaveFileName))
+                        {
+                            outputFile.WriteLine(variable.SavedString());
+                        }
+                    }
+                }
+
+                outputFile.Close();
+            }
+        }
+        else
+        {
+            if (!File.Exists(SaveFilePath()))
+                File.CreateText(SaveFilePath());
+
+            bool variableNotFound = false;
+
+            //check if any variables are missing
+            foreach (SaveVariable variable in Variables)
+            {
+                //should only ever occur after updates or if someone deleted a variable from the save file
+                if (FindVariable(variable.savedName) == null)
+                    variableNotFound = true;
+            }
+
+            //if a variable isn't found during initialisation
+            if (variableNotFound)
+            {
+                Debug.WriteLine("Fixing save file");
+                List<string> tempVariables = new List<string>();
+
+                //each variables values are temporarily added to a temp file to be re-written in the main file.
+                foreach (SaveVariable variable in Variables)
+                {
+                    string varString = FindVariable(variable.savedName);
+
+                    if (varString != null)
+                    {
+                        //currently saved value
+                        tempVariables.Add(varString);
+                    }
+                    //if we dont find the value then we instead write the default value
+                    else
+                    {
+                        //default value
+                        tempVariables.Add(variable.SavedString());
+                    }
+                }
+
+                using (StreamWriter outputFile = new StreamWriter(SaveFilePath()))
+                {
+                    if (groups.Length > 0)
+                    {
+                        for (int i = 0; i < groups.Length; i++)
+                        {
+                            outputFile.WriteLine(groups[i]);
                             outputFile.WriteLine();
 
                             foreach (SaveVariable variable in Variables)
                             {
-                                if (variable.saveFile.Equals(saveFile.SaveFileName) && variable.group == i)
+                                if (variable.saveFile.Equals(SaveFileName) && variable.group == i)
                                 {
-                                    outputFile.WriteLine(variable.SavedString());
+                                    for (int ii = 0; ii < tempVariables.Count; ii++)
+                                    {
+                                        //check each of our current temp variables to see if they contain the saved name
+                                        if (tempVariables[ii].StartsWith(variable.savedName + " : "))
+                                        {
+                                            outputFile.WriteLine(tempVariables[ii]);
+                                        }
+                                    }
                                 }
                             }
 
@@ -223,7 +354,7 @@ public static class SaveManager
                     {
                         foreach (SaveVariable variable in Variables)
                         {
-                            if (variable.saveFile.Equals(saveFile.SaveFileName))
+                            if (variable.saveFile.Equals(SaveFileName))
                             {
                                 outputFile.WriteLine(variable.SavedString());
                             }
@@ -233,122 +364,11 @@ public static class SaveManager
                     outputFile.Close();
                 }
             }
-        }
-        else
-        {
-            foreach (SaveFile saveFile in saveFileData)
+
+            foreach (SaveVariable variable in Variables)
             {
-                if (!File.Exists(saveFile.SaveFilePath()))
-                    File.CreateText(saveFile.SaveFilePath());
-
-                bool variableNotFound = false;
-
-                //check if any variables are missing
-                foreach (SaveVariable variable in Variables)
-                {
-                    //should only ever occur after updates or if someone deleted a variable from the save file
-                    if (FindVariable(variable.savedName) == null)
-                        variableNotFound = true;
-                }
-
-                //if a variable isn't found during initialisation
-                if (variableNotFound)
-                {
-                    Debug.WriteLine("Fixing save file");
-                    List<string> tempVariables = new List<string>();
-
-                    //each variables values are temporarily added to a temp file to be re-written in the main file.
-                    foreach (SaveVariable variable in Variables)
-                    {
-                        string varString = FindVariable(variable.savedName);
-
-                        if (varString != null)
-                        {
-                            //currently saved value
-                            tempVariables.Add(varString);
-                        }
-                        //if we dont find the value then we instead write the default value
-                        else
-                        {
-                            //default value
-                            tempVariables.Add(variable.SavedString());
-                        }
-                    }
-
-                    using (StreamWriter outputFile = new StreamWriter(saveFile.SaveFilePath()))
-                    {
-                        if (saveFile.groups.Length > 0)
-                        {
-                            for (int i = 0; i < saveFile.groups.Length; i++)
-                            {
-                                outputFile.WriteLine(saveFile.groups[i]);
-                                outputFile.WriteLine();
-
-                                foreach (SaveVariable variable in Variables)
-                                {
-                                    if (variable.saveFile.Equals(saveFile.SaveFileName) && variable.group == i)
-                                    {
-                                        for (int ii = 0; ii < tempVariables.Count; ii++)
-                                        {
-                                            //check each of our current temp variables to see if they contain the saved name
-                                            if (tempVariables[ii].StartsWith(variable.savedName + " : "))
-                                            {
-                                                outputFile.WriteLine(tempVariables[ii]);
-                                            }
-                                        }
-                                    }
-                                }
-
-                                outputFile.WriteLine();
-                            }
-                        }
-                        else
-                        {
-                            foreach (SaveVariable variable in Variables)
-                            {
-                                if (variable.saveFile.Equals(saveFile.SaveFileName))
-                                {
-                                    outputFile.WriteLine(variable.SavedString());
-                                }
-                            }
-                        }
-
-                        outputFile.Close();
-                    }
-                }
-
-                foreach (SaveVariable variable in Variables)
-                {
-                    variable.UpdateValue();
-                }
+                variable.UpdateValue();
             }
         }
-    }
-}
-
-public class SaveFile
-{
-    /// <summary>
-    /// Include .txt at the end unless you plan to use another filetype
-    /// </summary>
-    public string SaveFileName = "Main.txt";
-    public string SaveFilePath()
-    {
-        //change later
-        return Path.Combine(Globals.SavePath, SaveFileName);
-    }
-
-    public static implicit operator string(SaveFile obj)
-    {
-        return obj.SaveFileName;
-    }
-
-    public string[] groups = new string[] { "General", "Audio" };
-
-    public SaveFile(string name)
-    {
-        SaveManager.saveFileData.Add(this);
-
-        SaveFileName = name;
     }
 }

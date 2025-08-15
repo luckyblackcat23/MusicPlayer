@@ -88,6 +88,8 @@
             <Button Click="OpenFileLocationButton" Height="40" Content="OpenFileLocation"/>
           </StackPanel>
 
+          <Button Grid.Row="1" Click="FullScreen" Height="40" Content="OpenFileLocation" HorizontalAlignment="Right"/>
+
         </Grid>
       </Grid>
     </Grid>

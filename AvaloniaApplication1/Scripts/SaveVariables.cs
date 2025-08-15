@@ -29,11 +29,17 @@ public abstract class SaveVariable
     /// <summary> Updates the Value to match the save file </summary>
     public abstract void UpdateValue();
 
-    public string saveFile = "Main.txt";
+    public SaveFile saveFile;
 
-    public SaveVariable(string SavedName, string _SaveFile = "Main.txt", bool SaveOnChange = true, int Group = default)
+    public SaveVariable(string SavedName, SaveFile _SaveFile = null, bool SaveOnChange = true, int Group = default)
     {
         savedName = SavedName;
+
+        if (saveFile == null)
+            saveFile = SaveFile.Main();
+        else
+            savedName = saveFile;
+
         saveOnChange = SaveOnChange;
         group = Group;
         saveFile = _SaveFile;
@@ -72,7 +78,7 @@ public abstract class SaveVariable
     /// </summary>
     public string ReadSavedStringValue()
     {
-        return SaveManager.FindVariableValue(savedName);
+        return saveFile.FindVariableValue(savedName);
     }
 
     /// <summary> 
@@ -83,20 +89,20 @@ public abstract class SaveVariable
     /// </summary>
     public string ReadSavedFull()
     {
-        return SaveManager.FindVariable(savedName);
+        return saveFile.FindVariable(savedName);
     }
 
     /// <summary> Read the variable as it is currently written in the save file </summary>
     public void Save()
     {
-        SaveManager.UpdateVariable(this);
+        saveFile.UpdateVariable(this);
     }
 }
 
 public class SaveInt : SaveVariable
 {
     //honestly i dont fully understand why i need some of this although the code doesn't work without it.
-    public SaveInt(string SavedName, string _SaveFile = "Main.txt", int DefaultValue = 0, bool SaveOnChange = true, int Group = default) : base(SavedName, _SaveFile, SaveOnChange, Group) 
+    public SaveInt(string SavedName, SaveFile _SaveFile = null, int DefaultValue = 0, bool SaveOnChange = true, int Group = default) : base(SavedName, _SaveFile, SaveOnChange, Group) 
     {
         defaultValue = DefaultValue;
     }
@@ -155,7 +161,7 @@ public class SaveInt : SaveVariable
 
 public class SaveFloat : SaveVariable
 {
-    public SaveFloat(string SavedName, string _SaveFile = "Main.txt", float DefaultValue = 0f, bool SaveOnChange = true, int Group = default) : base(SavedName, _SaveFile, SaveOnChange, Group)
+    public SaveFloat(string SavedName, SaveFile _SaveFile = null, float DefaultValue = 0f, bool SaveOnChange = true, int Group = default) : base(SavedName, _SaveFile, SaveOnChange, Group)
     { 
         defaultValue = DefaultValue; 
     }
@@ -213,7 +219,7 @@ public class SaveFloat : SaveVariable
 
 public class SaveString : SaveVariable
 {
-    public SaveString(string SavedName, string _SaveFile = "Main.txt", string DefaultValue = "", bool SaveOnChange = true, int Group = default) : base(SavedName, _SaveFile, SaveOnChange, Group) 
+    public SaveString(string SavedName, SaveFile _SaveFile = null, string DefaultValue = "", bool SaveOnChange = true, int Group = default) : base(SavedName, _SaveFile, SaveOnChange, Group) 
     { 
         defaultValue = DefaultValue; 
     }
@@ -275,9 +281,9 @@ public class SaveString : SaveVariable
 
 public class SaveBool : SaveVariable
 {
-    public SaveBool(string SavedName, string _SaveFile = "Main.txt", bool DefaultValue = false, bool SaveOnChange = true, int Group = default) : base(SavedName, _SaveFile, SaveOnChange, Group) 
+    public SaveBool(string SavedName, SaveFile _SaveFile = null, bool DefaultValue = false, bool SaveOnChange = true, int Group = default) : base(SavedName, _SaveFile, SaveOnChange, Group) 
     { 
-        defaultValue = DefaultValue; 
+        defaultValue = DefaultValue;
     }
 
     bool defaultValue;
@@ -333,7 +339,7 @@ public class SaveBool : SaveVariable
 
 public class SaveEnum<T> : SaveVariable where T : struct, Enum
 {
-    public SaveEnum(string SavedName, string _SaveFile = "Main.txt", T DefaultValue = default, bool SaveOnChange = true, int Group = default) : base(SavedName, _SaveFile, SaveOnChange, Group)
+    public SaveEnum(string SavedName, SaveFile _SaveFile = null, T DefaultValue = default, bool SaveOnChange = true, int Group = default) : base(SavedName, _SaveFile, SaveOnChange, Group)
     { 
         defaultValue = DefaultValue; 
     }
@@ -381,59 +387,6 @@ public class SaveEnum<T> : SaveVariable where T : struct, Enum
         if (Enum.TryParse(ReadSavedStringValue(), out T result))
         {
             return result;
-        }
-        else
-        {
-            return defaultValue;
-        }
-    }
-}
-
-public class SaveAlbum : SaveVariable
-{
-    public SaveAlbum(string SavedName, string _SaveFile = "Main.txt", bool DefaultValue = false, bool SaveOnChange = true, int Group = default) : base(SavedName, _SaveFile, SaveOnChange, Group)
-    {
-        defaultValue = DefaultValue;
-    }
-
-    bool defaultValue;
-
-    private bool _value;
-    public bool Value
-    {
-        get
-        {
-            return _value;
-        }
-        set
-        {
-            _value = value;
-
-            if (saveOnChange)
-                Save();
-        }
-    }
-
-    public override string SavedString() => savedName + " : " + Value.ToString();
-
-    public override void UpdateValue()
-    {
-        if (bool.TryParse(ReadSavedStringValue(), out bool val))
-        {
-            Value = val;
-        }
-        else
-        {
-            Value = defaultValue;
-            Debug.WriteLine("Variable  `" + savedName + "` was not found when attempting to update value. value set to " + defaultValue);
-        }
-    }
-
-    public bool ReadSavedValue()
-    {
-        if (bool.TryParse(ReadSavedStringValue(), out bool val))
-        {
-            return val;
         }
         else
         {

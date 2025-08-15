@@ -7,6 +7,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using AvaloniaApplication1.Scripts;
 using Kawazu;
 
 namespace AvaloniaApplication1.ViewModels;
@@ -56,6 +57,8 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
         {
             if (!SliderHeld)
                 PlaybackTime = MusicPlayer.playbackTime.TotalSeconds;
+
+            InitializeDiscordRPC.SetPresence();
         };
         _timer.Start();
 

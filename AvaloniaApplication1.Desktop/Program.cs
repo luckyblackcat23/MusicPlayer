@@ -2,6 +2,7 @@
 
 using Avalonia;
 using Avalonia.ReactiveUI;
+using AvaloniaApplication1.Scripts;
 
 namespace AvaloniaApplication1.Desktop;
 
@@ -13,10 +14,10 @@ class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        InitializeDiscordRPC.Initialize();
+
         BuildAvaloniaApp()
         .StartWithClassicDesktopLifetime(args);
-
-        SaveManager.Initialize();
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

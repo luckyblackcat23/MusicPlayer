@@ -7,6 +7,7 @@ namespace AvaloniaApplication1.ViewModels
 {
     using System.Collections.Generic;
     using NAudio.Wave;
+    using NAudio.Vorbis;
     using System.IO;
     using System;
     using System.Diagnostics;
@@ -32,7 +33,7 @@ namespace AvaloniaApplication1.ViewModels
         public static int currentSongIndex = 0;
 
         static WaveOutEvent? outputDevice;
-        static AudioFileReader? audioFile;
+        static WaveStream? audioFile;
 
         //store paths
         public static List<string> musicInitial = new();
@@ -70,8 +71,30 @@ namespace AvaloniaApplication1.ViewModels
             foreach (FileInfo file in fileInfo)
             {
                 //file.exists might be unnecessary. might remove later if im really strapped on things to optimise
-                if (File.Exists(file.FullName) && file.Extension.Equals(".mp3"))
-                    temp.Add(file.FullName);
+                if (File.Exists(file.FullName))
+                {
+                    //there is definitely a better way to add supported file type
+                    if (file.Extension.Equals(".mp3"))
+                    {
+                        temp.Add(file.FullName);
+                    }
+                    else if (file.Extension.Equals(".ogg"))
+                    {
+                        temp.Add(file.FullName);
+                    }
+                    else if (file.Extension.Equals(".flac"))
+                    {
+                        temp.Add(file.FullName);
+                    }
+                    else if (file.Extension.Equals(".wav"))
+                    {
+                        temp.Add(file.FullName);
+                    }
+                    else if (file.Extension.Equals(".aiff"))
+                    {
+                        temp.Add(file.FullName);
+                    }
+                }
             }
 
             musicInitial = temp;
@@ -119,13 +142,31 @@ namespace AvaloniaApplication1.ViewModels
         {
             return Task.Run(() =>
             {
-                var newReader = new AudioFileReader(Song);
-
-                AudioFileReader oldReader = Interlocked.Exchange(ref audioFile, newReader);
-
-                if (oldReader != null)
+                if (Song.EndsWith(".mp3") || Song.EndsWith(".flac") || Song.EndsWith(".wav") || Song.EndsWith(".aiff"))
                 {
-                    oldReader.Dispose();
+                    WaveStream newReader;
+
+                    newReader = new AudioFileReader(Song);
+
+                    WaveStream oldReader = Interlocked.Exchange(ref audioFile, newReader);
+
+                    if (oldReader != null)
+                    {
+                        oldReader.Dispose();
+                    }
+                }
+                else if (Song.EndsWith(".ogg"))
+                {
+                    WaveStream newReader;
+
+                    newReader = new VorbisWaveReader(Song);
+
+                    WaveStream oldReader = Interlocked.Exchange(ref audioFile, newReader);
+
+                    if (oldReader != null)
+                    {
+                        oldReader.Dispose();
+                    }
                 }
             });
         }
@@ -191,7 +232,7 @@ namespace AvaloniaApplication1.ViewModels
                     Pause();
             }
 
-            Debug.WriteLine("Now playing: " + audioFile?.FileName);
+            Debug.WriteLine("Now playing: " + musicQueue[currentSongIndex]);
         }
 
         public static async void PlayPrevious()
@@ -207,7 +248,7 @@ namespace AvaloniaApplication1.ViewModels
             Stop();
             await Play();
 
-            Debug.WriteLine("Now playing: " + audioFile?.FileName);
+            Debug.WriteLine("Now playing: " + musicQueue[currentSongIndex]);
         }
 
         public static void Requeue(bool shuffle = false)
