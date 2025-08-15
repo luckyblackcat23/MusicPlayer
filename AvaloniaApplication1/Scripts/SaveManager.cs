@@ -114,7 +114,7 @@ public static class SaveManager
 
 public class SaveFile
 {
-    public List<SaveVariable> Variables;
+    public List<SaveVariable> Variables = new();
 
     private static SaveFile main;
     public static SaveFile Main()

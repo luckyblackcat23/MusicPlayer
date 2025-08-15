@@ -214,6 +214,7 @@ public partial class MainView : UserControl
 
     private void FullScreen(object? sender, RoutedEventArgs e)
     {
+        //temp playlist creation code
         new SaveFile("TestPlaylist");
     }
 }
