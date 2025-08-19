@@ -8,5 +8,6 @@ public static class Globals
     //public static readonly String CODE_PREFIX = "US-"; // Unmodifiable
 
     public const string SaveFolderName = "Music Player";
-    public static string SavePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), SaveFolderName);
+    public static readonly string SaveFolderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), SaveFolderName);
+    public static readonly string PlaylistsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), SaveFolderName, "Playlists");
 }

@@ -1,14 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
+using System.ComponentModel;
+using System.Diagnostics;
 using Avalonia.Threading;
-using AvaloniaApplication1.Scripts;
+using System.Reflection;
+using Avalonia.Controls;
+using System.Linq;
+using System.IO;
 using Kawazu;
+using System;
+using Avalonia.Interactivity;
+using Avalonia.Controls.Templates;
+using DynamicData;
 
 namespace AvaloniaApplication1.ViewModels;
 
@@ -34,7 +39,8 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
     public DispatcherTimer _timer;
 
     public bool SliderHeld;
-    public ObservableCollection<Song> _currentlyDisplayedSongs;
+
+    private ObservableCollection<Song> _currentlyDisplayedSongs;
     public ObservableCollection<Song> CurrentlyDisplayedSongs 
     { 
         get => _currentlyDisplayedSongs;
@@ -42,30 +48,60 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
         {
             _currentlyDisplayedSongs = value;
             OnPropertyChanged(nameof(CurrentlyDisplayedSongs));
-        } 
+        }
+    }
+
+    private ObservableCollection<DirectoryNode> _nodes;
+    public ObservableCollection<DirectoryNode> Nodes 
+    {
+        get => _nodes;
+        set
+        {
+            _nodes = value;
+            OnPropertyChanged(nameof(Nodes));
+        }
+    }
+
+    private ObservableCollection<DirectoryNode> _selectedNodes;
+    public ObservableCollection<DirectoryNode> SelectedNodes
+    {
+        get => _selectedNodes;
+        set
+        {
+            _selectedNodes = value;
+            OnPropertyChanged(nameof(SelectedNodes));
+        }
     }
 
     public MainViewModel()
     {
         Instance = this;
 
+        // Acts as an update loop. updates everything at a standard rate of x seconds
         _timer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(MinimumUIUpdateTime) // every 0.2 seconds
+            Interval = TimeSpan.FromMilliseconds(MinimumUIUpdateTime) // Changing this value could affect performance.
         };
         _timer.Tick += (s, e) =>
         {
             if (!SliderHeld)
                 PlaybackTime = MusicPlayer.playbackTime.TotalSeconds;
-
-            InitializeDiscordRPC.SetPresence();
         };
         _timer.Start();
 
+        if (!Directory.Exists(Globals.PlaylistsPath))
+            Directory.CreateDirectory(Globals.PlaylistsPath);
+
+        SelectedNodes = new ObservableCollection<DirectoryNode>();
+
+        Nodes = new ObservableCollection<DirectoryNode>() { new DirectoryNode(Globals.PlaylistsPath) };
+
+        //i really need to stop making functions called initialize
         MusicPlayer.Initialize();
 
         Initalization();
     }
+
 
     private async void Initalization()
     {
@@ -78,7 +114,7 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
         CurrentSongs = new List<Song>(CachedSongs);
         CurrentlyDisplayedSongs = new ObservableCollection<Song>(CachedSongs);
 
-        await CacheSongs();
+        await CacheSongs(); // Code beyond here runs after songs have finished caching
 
         songsFinishedCaching = true;
     }
@@ -133,12 +169,12 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
                     }
                     catch
                     {
-                        song.AlbumCover = LoadDefaultAlbumImage();
+                        song.AlbumCover = DefaultAlbumImage();
                     }
                 }
                 else
                 {
-                    song.AlbumCover = LoadDefaultAlbumImage();
+                    song.AlbumCover = DefaultAlbumImage();
                 }
             }
             catch (Exception ex)
@@ -212,31 +248,111 @@ public class MainViewModel : ViewModelBase, INotifyPropertyChanged
             else
             {
                 //Debug.WriteLine("file does not contain album art. album replaced with default image");
-                return LoadDefaultAlbumImage();
+                return DefaultAlbumImage();
             }
         }
         else
         {
             Debug.WriteLine("no song was loaded when loading album image");
-            return LoadDefaultAlbumImage();
+            return DefaultAlbumImage();
         }
 
         ms.Seek(0, SeekOrigin.Begin);
         return new Bitmap(ms);
     }
 
-    public Bitmap LoadDefaultAlbumImage()
+    public string DefaultAlbumImagePath()
     {
-        //change later
-        string path = @"C:\Users\Jordan\Music\GameNameHereReplaceLater\Songs\The Vampire - DECO_27.mp3";
-        var tfile = TagLib.File.Create(path);
-        var ms = new MemoryStream(tfile.Tag.Pictures[0].Data.Data);
-        ms.Seek(0, SeekOrigin.Begin);
-        return new Bitmap(ms).CreateScaledBitmap(new Avalonia.PixelSize(64, 64));
+        return Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"C:Assets\DefaultIcon.jpg");
+    }
+
+    public Bitmap DefaultAlbumImage()
+    {
+        if (Design.IsDesignMode)
+        {
+            //change later
+            string path = @"C:\Users\Jordan\Music\GameNameHereReplaceLater\Songs\The Vampire - DECO_27.mp3";
+            var tfile = TagLib.File.Create(path);
+            var ms = new MemoryStream(tfile.Tag.Pictures[0].Data.Data);
+            ms.Seek(0, SeekOrigin.Begin);
+            return new Bitmap(ms);
+        }
+        else
+            return new Bitmap(DefaultAlbumImagePath());
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     protected virtual void OnPropertyChanged(string propertyName)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+}
+
+public class DirectoryNode
+{
+    public string Name { get; }
+    public string FullPath { get; }
+    public ObservableCollection<DirectoryNode> SubNodes { get; }
+
+    public NodeType Type { get; }
+
+    private bool _isLoaded;
+
+    public DirectoryNode(string path)
+    {
+        FullPath = path;
+        Name = Path.GetFileName(path);
+        if (string.IsNullOrEmpty(Name))
+            Name = path;
+
+        SubNodes = new ObservableCollection<DirectoryNode>();
+
+        if (Directory.Exists(path))
+        {
+            Type = NodeType.Directory;
+            // Add a dummy child so the expander arrow appears
+            SubNodes.Add(null!);
+        }
+        else
+        {
+            Type = NodeType.Playlists;
+        }
+        /*scrapped for now
+        else if (Path.GetExtension(path) == ".myext") // in case i add any extra file types of my own in the future
+        {
+            Type = NodeType.SpecialFile;
+        }
+        */
+
+        LoadChildren();
+    }
+
+    public void LoadChildren()
+    {
+        if (_isLoaded || Type != NodeType.Directory) return;
+        _isLoaded = true;
+
+        SubNodes.Clear();
+
+        try
+        {
+            foreach (var dir in Directory.GetDirectories(FullPath))
+            {
+                SubNodes.Add(new DirectoryNode(dir));
+            }
+            foreach (var file in Directory.GetFiles(FullPath))
+            {
+                SubNodes.Add(new DirectoryNode(file));
+            }
+        }
+        catch
+        {
+            // Skip directories we don't have access to
+        }
+    }
+}
+
+public enum NodeType
+{
+    Directory,
+    Playlists,
 }

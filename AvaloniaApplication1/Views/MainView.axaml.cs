@@ -66,13 +66,19 @@ public partial class MainView : UserControl
 
     private void Slider_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        MainViewModel.Instance.SliderHeld = true;
+        if (e.Pointer.IsPrimary)
+        {
+            MainViewModel.Instance.SliderHeld = true;
+        }
     }
 
     private void Slider_PointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        MainViewModel.Instance.SliderHeld = false;
-        MusicPlayer.Play();
+        if (e.Pointer.IsPrimary)
+        {
+            MainViewModel.Instance.SliderHeld = false;
+            MusicPlayer.Play();
+        }
     }
 
     private void OnVolumeChanged(object? sender, RangeBaseValueChangedEventArgs e)
@@ -135,12 +141,12 @@ public partial class MainView : UserControl
 
                     try
                     {
-                        song.AlbumCover = new Bitmap(ms).CreateScaledBitmap(new Avalonia.PixelSize(124, 124)); ;
+                        song.AlbumCover = new Bitmap(ms).CreateScaledBitmap(new PixelSize(256, 256));
                     }
                     catch (Exception ex)
                     {
                         Debug.WriteLine(ex.Message);
-                        song.AlbumCover = MainViewModel.Instance.LoadDefaultAlbumImage();
+                        song.AlbumCover = MainViewModel.Instance.DefaultAlbumImage().CreateScaledBitmap(new PixelSize(256, 256));
                     }
 
                     ms.Dispose();
@@ -148,7 +154,7 @@ public partial class MainView : UserControl
                 else
                 {
                     //Debug.WriteLine("file does not contain album art. album replaced with default image");
-                    song.AlbumCover = MainViewModel.Instance.LoadDefaultAlbumImage();
+                    song.AlbumCover = MainViewModel.Instance.DefaultAlbumImage().CreateScaledBitmap(new PixelSize(256, 256));
                 }
             }           
         }
@@ -166,13 +172,16 @@ public partial class MainView : UserControl
     {
         if (sender is Control control)
         {
-            var rowDataContext = control.DataContext;
-            // rowDataContext is the item bound to the row
-            // Use it as needed, for example cast to your item type:
-            var song = rowDataContext as Song;
-            if (song != null)
+            if(e.Pointer.IsPrimary)
             {
-                MusicPlayer.PlaySongFromQueue(song.SongPath);
+                var rowDataContext = control.DataContext;
+                // rowDataContext is the item bound to the row
+                // Use it as needed, for example cast to your item type:
+                var song = rowDataContext as Song;
+                if (song != null)
+                {
+                    MusicPlayer.PlaySongFromQueue(song.SongPath);
+                }
             }
         }
     }
@@ -189,21 +198,35 @@ public partial class MainView : UserControl
 
             foreach (Song song in MainViewModel.Instance.CurrentSongs)
             {
+                bool songAdded;
+
                 if (song.Title?.Length > 0)
                     if (song.Title.ToLower().Contains(romanisedText.ToLower()))
+                    {
                         temp.Add(song);
+                        continue;
+                    }
 
                 if (song.Artist?.Length > 0)
                     if (song.Artist.ToLower().Contains(romanisedText.ToLower()))
+                    {
                         temp.Add(song);
+                        continue;
+                    }
 
                 if (song.RomanisedTitle?.Length > 0)
                     if (song.RomanisedTitle.ToLower().Contains(romanisedText.ToLower()))
+                    {
                         temp.Add(song);
+                        continue;
+                    }
 
                 if (song.RomanisedArtist?.Length > 0)
                     if (song.RomanisedArtist.ToLower().Contains(romanisedText.ToLower()))
+                    {
                         temp.Add(song);
+                        continue;
+                    }
             }
 
             converter.Dispose();
@@ -215,6 +238,14 @@ public partial class MainView : UserControl
     private void FullScreen(object? sender, RoutedEventArgs e)
     {
         //temp playlist creation code
-        new SaveFile("TestPlaylist");
+        //var songs = MainViewModel.Instance.CachedSongs;
+
+        SaveFile ed = new SaveFile("TestPlaylist.txt");
+        new SaveFloat("testing", ed).Set(3.14f);
+        new SaveFloat("sting", ed).Set(2.71f);
+        new SaveFloat("tting", ed).Set(1.23f);
+        new SaveFloat("teting", ed).Set(4.56f);
+
+        //MainWindow.Instance.DeleteButton_Click(sender, e);
     }
 }

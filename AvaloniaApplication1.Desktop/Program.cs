@@ -14,7 +14,7 @@ class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        InitializeDiscordRPC.Initialize();
+        DiscordRichPresence.Initialize();
 
         BuildAvaloniaApp()
         .StartWithClassicDesktopLifetime(args);

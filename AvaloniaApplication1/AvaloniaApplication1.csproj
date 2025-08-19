@@ -10,7 +10,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Scripts\SaveVariables.cs" />
+    <AvaloniaResource Remove="Assets\DefaultIcon.jpg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Assets\avalonia-logo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\DefaultIcon.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -28,5 +38,11 @@
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Update="Assets\DefaultIcon-logo.jpg">
+      <CopyToOutputDirectory></CopyToOutputDirectory>
+    </AvaloniaResource>
   </ItemGroup>
 </Project>

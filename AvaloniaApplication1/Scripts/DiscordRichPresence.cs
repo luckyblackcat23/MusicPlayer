@@ -4,9 +4,9 @@ using System;
 
 namespace AvaloniaApplication1.Scripts
 {
-    public static class InitializeDiscordRPC
+    public static class DiscordRichPresence
     {
-        private static DiscordRpcClient client;
+        public static DiscordRpcClient client;
 
         //Called when your application first starts.
         //For example, just before your main loop, on OnEnable for unity.
@@ -46,7 +46,7 @@ namespace AvaloniaApplication1.Scripts
             client.SetPresence(new RichPresence()
             {
                 Details = details,
-                State = "currently testing new features!", // fix later
+                State = state,
                 Assets = new Assets()
                 {
                     LargeImageKey = "defaulticon",

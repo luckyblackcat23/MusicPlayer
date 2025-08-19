@@ -14,27 +14,51 @@
   </Design.DataContext>
 
   <!-- Main Layout -->
-  <Grid RowDefinitions="*,  Auto" ColumnDefinitions="Auto, *" Background="Blue">
-    <Grid RowDefinitions="*,  Auto">
-      <!-- Search -->
-      <Grid RowDefinitions="Auto, Auto">
-        <TextBox Watermark="test"/>
+  <Grid Background="Blue">
+    <Grid RowDefinitions="*,  Auto" ColumnDefinitions="Auto, *">
+      <Grid RowDefinitions="Auto, *,  Auto">
+        <Rectangle Fill="Black" Height="32" VerticalAlignment="Top"></Rectangle>
+
+        <!--Side Menu-->
+        <TreeView Width="300"
+                  ItemsSource="{Binding Nodes}"
+                  SelectedItems="{Binding SelectedNodes}"
+                  SelectionMode="Multiple"
+                  Grid.Row="1">
+          <TreeView.ItemTemplate>
+            <TreeDataTemplate ItemsSource="{Binding SubNodes}">
+              <Border HorizontalAlignment="Left"
+                      BorderBrush="Gray" BorderThickness="1"
+                      CornerRadius="5" Padding="15 3">
+                <TextBlock Text="{Binding Name}" />
+              </Border>
+            </TreeDataTemplate>
+          </TreeView.ItemTemplate>
+        </TreeView>
+
+        <!-- Album Art -->
+        <Image Source="{Binding CurrentlyPlayingAlbumCover}" Grid.Row="2" Height="300" Width="300" Stretch="UniformToFill"/>
       </Grid>
 
-      <!-- Album Art -->
-      <Image Source="{Binding CurrentlyPlayingAlbumCover}" Grid.Row="1" Height="300" Width="300" Stretch="UniformToFill"/>
-    </Grid>
-    
-    <Grid Grid.Column="1" RowDefinitions="Auto, *, Auto">
-      <!-- Song Display List -->
-        <TextBox x:Name="SongSearchBar"/>
-          
+      <Grid Grid.Column="1" RowDefinitions="Auto, *, Auto">
+        <!-- Search -->
+        <TextBox x:Name="SongSearchBar" Background="Black"/>
+
+        <!-- Song Display List -->
         <DataGrid x:Name="SongList" Grid.Row="1" ItemsSource="{Binding CurrentlyDisplayedSongs}" AutoGenerateColumns="False" IsReadOnly="True" LoadingRow="DataGrid_LoadingRow" UnloadingRow="DataGrid_UnloadingRow">
           <DataGrid.Columns>
             <DataGridTemplateColumn Width="64">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
-                  <Image Source="{Binding AlbumCover}" PointerReleased="Image_PointerReleased"/>
+                  <Image Source="{Binding AlbumCover}" PointerReleased="Image_PointerReleased">
+                    <Image.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="Play" Command="{Binding DataContext.PlaySongCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" />
+                        <MenuItem Header="Delete" Command="{Binding DataContext.DeleteSongCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" />
+                      </ContextMenu>
+                    </Image.ContextMenu>
+                  </Image>
+
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
@@ -60,40 +84,41 @@
           </DataGrid.Columns>
         </DataGrid>
 
-      <!-- Bottom Panel (Controls) -->
-      <Rectangle Fill="#0011ab" Grid.Row="2"></Rectangle>
-      <Grid Grid.Row="2" ColumnDefinitions="Auto, *" Grid.Column="1" Margin="5,5">
+        <!-- Bottom Panel (Controls) -->
+        <Rectangle Fill="#0011ab" Grid.Row="2"></Rectangle>
+        <Grid Grid.Row="2" ColumnDefinitions="Auto, *" Grid.Column="1" Margin="5,5">
 
-        <!-- Info and Controls Section -->
-        <Grid Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Bottom" RowDefinitions="Auto, *" Background="Transparent" Height="100" >
+          <!-- Info and Controls Section -->
+          <Grid Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Bottom" RowDefinitions="Auto, *" Background="Transparent" Height="100" >
 
-          <!-- Progress Bar with Time Labels -->
-          <Grid ColumnDefinitions="Auto, *, Auto">
-            <TextBlock Text="{Binding PlaybackTime, StringFormat=\{0:0.0\}}" VerticalAlignment="Center" Foreground="White" Width="40"/>
-            <Slider x:Name="PlaybackSlider" Grid.Column="1" ValueChanged="SliderValueChanged" Minimum="0" Maximum="{Binding SongLength}" Value="{Binding PlaybackTime}" VerticalAlignment="Center" Margin="5,0" Foreground="Green"/>
+            <!-- Progress Bar with Time Labels -->
+            <Grid ColumnDefinitions="Auto, *, Auto">
+              <TextBlock Text="{Binding PlaybackTime, StringFormat=\{0:0.0\}}" VerticalAlignment="Center" Foreground="White" Width="40"/>
+              <Slider x:Name="PlaybackSlider" Grid.Column="1" ValueChanged="SliderValueChanged" Minimum="0" Maximum="{Binding SongLength}" Value="{Binding PlaybackTime}" VerticalAlignment="Center" Margin="5,0" Foreground="Green"/>
 
-            <TextBlock Grid.Column="2" Text="{Binding SongLength, StringFormat=\{0:0.0\}}" VerticalAlignment="Center" TextAlignment="Center" Foreground="White" Width="40"/>
+              <TextBlock Grid.Column="2" Text="{Binding SongLength, StringFormat=\{0:0.0\}}" VerticalAlignment="Center" TextAlignment="Center" Foreground="White" Width="40"/>
+            </Grid>
+
+            <!-- Controls (Play, Pause, etc.) -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+              <Button Click="PlayButton" Height="40" Content="Play"/>
+
+              <!-- Volume Slider -->
+              <Slider x:Name="VolumeSlider" Minimum="0" Maximum="1" ValueChanged="OnVolumeChanged" Width="200" Margin="10,0"></Slider>
+
+              <Button Click="PreviousButton" Height="40" Content="Previous"/>
+              <Button Click="NextButton" Height="40" Content="Next"/>
+              <Button Click="NextButton" Height="40" Content="Lyrics"/>
+              <Button Click="OpenFileLocationButton" Height="40" Content="OpenFileLocation"/>
+            </StackPanel>
+
+            <Button Grid.Row="1" Click="FullScreen" Height="40" Content="OpenFileLocation" HorizontalAlignment="Right"/>
+
           </Grid>
-
-          <!-- Controls (Play, Pause, etc.) -->
-          <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-            <Button Click="PlayButton" Height="40" Content="Play"/>
-
-            <!-- Volume Slider -->
-            <Slider x:Name="VolumeSlider" Minimum="0" Maximum="1" ValueChanged="OnVolumeChanged" Width="200" Margin="10,0"></Slider>
-
-            <Button Click="PreviousButton" Height="40" Content="Previous"/>
-            <Button Click="NextButton" Height="40" Content="Next"/>
-            <Button Click="NextButton" Height="40" Content="Lyrics"/>
-            <Button Click="OpenFileLocationButton" Height="40" Content="OpenFileLocation"/>
-          </StackPanel>
-
-          <Button Grid.Row="1" Click="FullScreen" Height="40" Content="OpenFileLocation" HorizontalAlignment="Right"/>
-
         </Grid>
       </Grid>
-    </Grid>
 
+    </Grid>
   </Grid>
   
 </UserControl>

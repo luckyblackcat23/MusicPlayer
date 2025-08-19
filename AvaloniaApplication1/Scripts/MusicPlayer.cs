@@ -14,6 +14,7 @@ namespace AvaloniaApplication1.ViewModels
     using System.Threading.Tasks;
     using System.Threading;
     using DynamicData;
+    using AvaloniaApplication1.Scripts;
 
     internal static class MusicPlayer
     {
@@ -31,6 +32,19 @@ namespace AvaloniaApplication1.ViewModels
 
         public static string[] musicQueue = new string[0];
         public static int currentSongIndex = 0;
+
+        public static Song CurrentSong()
+        {
+            if (MainViewModel.Instance.songsFinishedCaching)
+            {
+                foreach (Song song in MainViewModel.Instance.CachedSongs)
+                {
+                    if (song.SongPath == musicQueue[currentSongIndex]) return song;
+                }
+            }
+
+            return null!;
+        }
 
         static WaveOutEvent? outputDevice;
         static WaveStream? audioFile;
@@ -119,6 +133,15 @@ namespace AvaloniaApplication1.ViewModels
             //once the song has ended
             if (outputDevice?.PlaybackState == PlaybackState.Stopped && !paused)
                 PlayNext();
+
+            Song currentSong = CurrentSong();
+
+            if (currentSong != null && !paused)
+                DiscordRichPresence.SetPresence(currentSong.Title, currentSong.Artist);
+            else
+                DiscordRichPresence.SetPresence();
+
+            DiscordRichPresence.client.Invoke();
         }
 
         public static void Pause()
@@ -317,7 +340,7 @@ public class Song : INotifyPropertyChanged
             if (_albumCover != null)
                 return _albumCover;
             else
-                return MainViewModel.Instance.LoadDefaultAlbumImage();
+                return MainViewModel.Instance.DefaultAlbumImage();
         }
         set
         {
@@ -446,18 +469,33 @@ public class Song : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
 
-public class Playlist : INotifyPropertyChanged
+public class Playlist : SaveFile
 {
-    public List<Song> Songs;
-    public string PlaylistCoverPath;
+    public SaveString PlaylistCoverPath;
+
+    public Playlist(string name, List<Song> songs) : base(name)
+    {
+        foreach (Song s in songs)
+        {
+            SaveString savedSong = new SaveString(s.Title, this);
+            savedSong.Set(s.SongPath);
+
+            Variables.Add(savedSong);
+        }
+
+        PlaylistCoverPath = new SaveString("Album Image", this);
+        PlaylistCoverPath.Set(MainViewModel.Instance.DefaultAlbumImagePath());
+    }
+
+    public void AddSong(Song song)
+    {
+        SaveString newSong = new SaveString(song.Title, this);
+        newSong.Set(song.SongPath);
+        Variables.Add(newSong);
+    }
 
     public Bitmap GetAlbumCover()
     {
         return new Bitmap(PlaylistCoverPath);
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    protected void OnPropertyChanged(string propertyName) =>
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
